@@ -5,7 +5,7 @@ import pandas as pd
 from clickhouse_sqlalchemy import make_session
 from sqlalchemy import create_engine
 
-def get_clickhouse(conn_name):
+def get_clickhouse(conn_name)
     try:
         param = config.CLICKHOUSE[conn_name]
         conn = CDAO(param['host'], param['port'], param['user'], param['password'], param['name'])
