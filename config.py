@@ -13,5 +13,12 @@ CLICKHOUSE = {
         "host": "10.21.90.15",
         "port": 10081,
         "name": "sop"
-    }
+    },
+    'chmaster2': {
+        'host': '10.21.90.15',
+        'port': 28066,
+        'name': '',
+        'user': '',
+        'password': ''
+    },
 }
