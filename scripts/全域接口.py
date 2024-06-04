@@ -85,13 +85,16 @@ def pandas_save(brand_info,cat_info,df1, df2,filenames):
     df1 = pd.DataFrame(df1)
     df2 = pd.DataFrame(df2)
     dataframes = [brand_info,cat_info,df1, df2]
-
+    int_type = ['cid','alias_bid','sales_total','tb_sales_total','num_total','tb_num_total']
     # 创建一个映射，将工作表名称映射到对应的DataFrame
     df_map = dict(zip(filenames, dataframes))
     # 创建一个ExcelWriter对象
     with pd.ExcelWriter(f'./全域数据下载{int(time.time())}.xlsx',engine='xlsxwriter',options={'strings_to_urls': False,'constant_memory':False}) as writer:
         # 将DataFrame写入不同的工作表
         for df, filename in zip(dataframes, filenames):
+            for c in int_type:
+                if c in df.columns.values:
+                    df[c] = df[c].astype(float)
             start_time = time.time()
             df.to_excel(writer, sheet_name=filename, float_format='%.2f', index=False)
             print(f"pandas 保存 {filename} 耗时：", get_time_dif(start_time))
