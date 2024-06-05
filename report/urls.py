@@ -11,6 +11,7 @@ urlpatterns = [
     path('media/', views.download_file, name='download_file'),
     path('add/', views.add, name='add'),
     path('lvname/', views.sop_lv_name, name='lv_name'),
+    path('upload/', views.upload, name='upload'),
 ]
 
 if settings.DEBUG:

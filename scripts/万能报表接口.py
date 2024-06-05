@@ -31,6 +31,7 @@ def get_url(url, data):
     response = requests.post(url, headers=set_headers(url, data), data=data)
     # 检查响应状态码
     if response.status_code == 200:
+        print(response.json())
         # 获取响应的内容
         html_content = response.content
         # 创建BeautifulSoup对象

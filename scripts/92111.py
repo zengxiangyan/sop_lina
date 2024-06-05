@@ -38,7 +38,7 @@ AND (`sp功效-{fuction}`!='否'))
 GROUP BY `月份`,season,`功效`
 """
     sql = f"""
-select source,shop_type,cid,`sp功效-{fuction}` as `功效`,alias_all_bid,item_id,dictGetOrDefault('all_brand', 'name', tuple(toUInt32(alias_all_bid)), '') as Brand,`功效`,argMax(name,num),argMax(img,num) as `图片`,
+select cid,`sp功效-{fuction}` as `功效`,alias_all_bid,item_id,dictGetOrDefault('all_brand', 'name', tuple(toUInt32(alias_all_bid)), '') as Brand,`功效`,argMax(name,num)name,argMax(img,num) as `图片`,
 case 
 	when source = 1 and shop_type < 20 then CONCAT('https://item.taobao.com/item.htm?id=',item_id)
 	when source = 1 and shop_type > 20 then CONCAT('https://detail.tmall.com/item.htm?id=',item_id)
@@ -48,10 +48,10 @@ case
 	when source = 9 then CONCAT('www.jiuxian.com/goods.',item_id,'.html')
 	else '其他' end as url,sum(sales)/100 as `销售额` ,toStartOfMonth(pkey) as `月份`
 from sop_e.entity_prod_92111_E
-where date>='2023-01-01' and date<'2024-01-01' 
+where date>='2023-04-01' and date<'2024-04-01' 
 and `sp子品类` in ['美发护发'] 
 and `sp功效-{fuction}`!='否'
-group by source,shop_type,`月份`,cid,alias_all_bid,item_id,`功效`
+group by url,`月份`,cid,alias_all_bid,item_id,`功效`
 order by `销售额` desc"""
 
     print(num)
@@ -71,12 +71,14 @@ order by `销售额` desc"""
 data = newdata
 json = {
         'start_date': '2023-01-01',
-        'end_date': '2024-01-01',
+        'end_date': '2024-04-01',
         'eid': '92111',
         'table': 'entity_prod_92111_E',
         'cid': [],
     }
-data = cid_name(data,json)
-data['子品类'] = [ i.split('>>')[len(i.split('>>'))-1] for i in data['Full_path']]
-data = data[['子品类', '功效', 'alias_all_bid', 'item_id', 'Brand', 'argMax(name, num)','图片', 'url', '销售额', '月份']]
-data.to_csv(r'C:\Users\zeng.xiangyan\Downloads\雅诗兰黛23年1-12月rowdata.csv',index=False,encoding='utf-8-sig')
+# data = cid_name(data,json)
+# data['子品类'] = [ i.split('>>')[len(i.split('>>'))-1] for i in data['Full_path']]
+# data = data[['子品类', '功效', 'alias_all_bid', 'item_id', 'Brand', 'argMax(name, num)','图片', 'url', '销售额', '月份']]
+lv_name = pd.read_csv(r'C:\Users\zeng.xiangyan\Downloads\92111 (2).csv')[['cid','lv1name','lv2name','lv3name','lv4name','lv5name']]
+data = pd.merge(data, lv_name, on=['cid'], how='left', suffixes=('_history', '_new'))
+data.to_csv(r'C:\Users\zeng.xiangyan\Downloads\雅诗兰黛23年Q2-24年Q1rowdata.csv',index=False,encoding='utf-8-sig')
