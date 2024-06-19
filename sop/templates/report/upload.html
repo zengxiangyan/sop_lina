@@ -1,0 +1,238 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>zyupload上传实例</title>
+    <link rel="stylesheet" href="{% static 'layuimini/lib/layui-v2.6.3/css/layui.css' %}" media="all">
+    <link rel="stylesheet" href="{% static 'dist/layui/css/layui.css' %}" media="all">
+    <link rel="stylesheet" href="{% static 'layuimini/lib/jq-module/zyupload/zyupload-1.0.0.min.css' %}" media="all">
+    <link rel="stylesheet" href="{% static 'layuimini/css/public.css' %}" media="all">
+</head>
+<style>
+    /* 在CSS中添加样式 */
+    .file-preview {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .file-icon {
+        width: 32px; /* 或者其他尺寸 */
+        height: 32px; /* 或者其他尺寸 */
+        margin-right: 10px;
+    }
+
+    .file-name {
+        font-size: 16px;
+        flex-grow: 1; /* 让文件名占据多余的空间 */
+    }
+
+
+</style>
+<body>
+{% csrf_token %}
+<div class="layuimini-container">
+    <div class="layuimini-main">
+        <blockquote class="layui-elem-quote">
+            自动化报告模板上传:<br><br>
+            1、点击选择文件/拖动文件到指定区域 可一次性上传多个需要批量导入的文件<br>
+            2、继续选择文件是在已经添加了文件的基础上继续选择需要导入的文件<br>
+            3、开始上传会将下方列出的所有文件一次性上传至服务器，同批次上传的文件均为同一个报告任务的模板，不同的报告单独上传<br>
+            4、每个待上传文件右边的删除按钮仅对该文件生效，删除后该文件将从本次模板上传任务中移除<br>
+            5、每个待上传文件右边的添加按钮仅对该文件生效，点击后将该文件单独作为一个模板上传任务添加<br>
+        </blockquote>
+        <div id="zyupload" class="zyupload">
+        </div>
+    </div>
+<!-- 在页面中包含SheetJS库 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.2/xlsx.full.min.js"></script>
+
+
+
+</div>
+<script src="{% static 'layuimini/lib/jquery-3.4.1/jquery-3.4.1.min.js' %}" charset="utf-8"></script>
+<script src="{% static 'layuimini/lib/layui-v2.6.3/layui.js' %}" charset="utf-8"></script>
+<script src="{% static 'layuimini/lib/jq-module/zyupload/zyupload-1.0.0.min.js' %}" charset="utf-8"></script>
+<script type="text/javascript">
+    var selectedFiles0 = [];
+    var selectedFiles = [];
+    var csrftoken = '{{ csrf_token }}';
+    function uploadFiles() {
+        // 检查是否有文件被选中
+        if (selectedFiles.length > 0) {
+            var formData = new FormData();
+
+            // 将所有选中的文件添加到FormData对象中
+            $.each(selectedFiles, function(index, file) {
+                formData.append('files[]', file); // 使用数组的方式发送多个文件
+            });
+            console.log(formData);
+            // 发起 AJAX 请求
+            $.ajax({
+                url: '/supermarket/product/upload/', // 上传URL
+                type: 'POST',
+                data: formData,
+                contentType: false, // 必须设置为false，因为是由表单直接设置
+                processData: false, // 必须设置为false，因为FormData已经是正确的格式
+                beforeSend: function(xhr, settings) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken); // 设置 CSRF 令牌头部
+                },
+                success: function(response) {
+                    // 文件上传成功的操作
+                    console.info("文件上传完成");
+                    console.info(response);
+                    $("#uploadInf").append("<p>上传成功，后台将自动分配导数任务：" + decodeURIComponent(response.fileUrls) + "</p>");
+                },
+                error: function(xhr, status, error) {
+                    // 文件上传失败的操作
+                    console.info("此文件上传失败：");
+                    console.info(formData);
+                }
+            });
+        } else {
+            alert('请至少选这一个文件');
+        }
+    }
+
+    $(function () {
+        // 覆盖原插件的 'addFilePreview' 方法
+        var originalAddFilePreview = $.fn.zyUpload.addFilePreview;
+        $.fn.zyUpload.addFilePreview = function(file, html) {
+            // 如果需要在这里添加自定义逻辑，请确保你知道如何与原插件的预览逻辑集成
+            // 否则，你可以保持这个函数为空，如果你已经在 onSelect 中处理了预览逻辑
+        };
+
+        // 初始化插件
+        $("#zyupload").zyUpload({
+            width: "95%",                 // 宽度
+            height: "100%",                // 高度
+            itemWidth: "140px",             // 文件项的宽度
+            itemHeight: "115px",            // 文件项的高度
+            url: "",              // 上传文件的路径
+            fileType: ["xlsx","csv"],       // 上传文件的类型
+            fileSize: 51200000,             // 上传文件的大小
+            multiple: true,                 // 是否可以多个文件上传
+            dragDrop: true,                 // 是否可以拖动上传文件
+            tailor: true,                   // 是否可以裁剪图片
+            del: true,                      // 是否可以删除文件
+            finishDel: false,               // 是否在上传文件完成后删除预览
+            /* 外部获得的回调接口 */
+            onSelect: function (selectFiles, allFiles) {
+                console.info("当前选择了以下文件：");
+                console.info(selectFiles);
+
+                // 处理所有选中的文件
+                var fileIdCounter = 0;
+                $.each(selectFiles, function(index, file) {
+                    file.uuid = fileIdCounter++;
+                    // 创建自定义预览的HTML
+                    var previewHtml = '<div class="upload_preview">' +
+                                      '<div class="file-preview">' +
+                                      '<img src="{% static 'layuimini/images/excel_icon.jpg' %}" class="file-icon">' +
+                                      '<div class="file-name">' + file.name + '</div>' +
+                                      '<button type="button" class="layui-btn layui-btn-xs layui-btn-danger data-count-review btn-delete" data-filename="' + file.name + '">删除</button>' +
+                                      '<button type="button" class="layui-btn layui-btn-normal layui-btn-xs data-count-edit btn-add" data-filename="' + file.name + '">添加</button>' +
+                                      '</div>'+
+                                      '</div>';
+                    selectedFiles0.push(file);
+                    selectedFiles.push(file);
+
+                    // 添加到自定义的预览区域
+                    $(".upload_main").append(previewHtml);
+                    $("#zyupload").append('<div id="myTable"></div>');
+                    $("#preview").hide();
+                    $("#preview").remove();
+
+                    // 读取文件内容
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        var data = new Uint8Array(e.target.result);
+                        var workbook = XLSX.read(data, {type: 'array'});
+
+                        // 只处理第一张工作表
+                        var firstSheetName = workbook.SheetNames[0];
+                        var worksheet = workbook.Sheets[firstSheetName];
+
+                        // 将工作表对象转换为JSON
+                        var json = XLSX.utils.sheet_to_json(worksheet, {header:1});
+
+                        // 获取前20条数据（如果数据少于20条，则获取全部）
+                        var topRows = json.length > 21 ? json.slice(1, 21) : json.slice(1);
+
+                        // 开始构建表格
+                        var tableHTML = '<table class="layui-table">';
+
+                        // 构建表头
+                        tableHTML += '<thead><tr>';
+                        json[0].forEach(function(header) {
+                            tableHTML += '<th>' + header + '</th>';
+                        });
+                        tableHTML += '</tr></thead>';
+
+                        // 构建表体
+                        tableHTML += '<tbody>';
+                        topRows.forEach(function(rowData) {
+                            tableHTML += '<tr>';
+                            rowData.forEach(function(cell) {
+                                tableHTML += '<td>' + cell + '</td>';
+                            });
+                            tableHTML += '</tr>';
+                        });
+                        tableHTML += '</tbody>';
+
+                        tableHTML += '</table>'; // 结束表格标签
+
+                        // 将生成的HTML表格插入到页面中
+                        document.getElementById('myTable').innerHTML = tableHTML;
+                    };
+                    reader.readAsArrayBuffer(file); // 读取文件内容
+
+                });
+            }
+        });
+    });
+
+    // 使用事件委托监听删除和添加按钮的点击事件
+    $(document).on('click', '.btn-delete', function(event) {
+        event.preventDefault();  // 阻止按钮默认的提交行为
+        event.stopPropagation(); // 阻止事件冒泡到父元素
+
+        var filename = $(this).data('filename'); // 获取文件名
+        // 执行删除操作
+        $(this).closest('.upload_preview').remove(); // 删除整个预览元素
+        // 更新文件数组或执行其他逻辑
+        // 移除对应的文件
+        selectedFiles0 = selectedFiles0.filter(function(file) {
+            return file.name !== filename;
+        });
+        selectedFiles = selectedFiles0;
+    });
+
+    $(document).on('click', '.btn-add', function(event) {
+        event.preventDefault();  // 阻止按钮默认的提交行为
+        event.stopPropagation(); // 阻止事件冒泡到父元素
+
+        var filename = $(this).data('filename'); // 获取文件的filename
+        console.info(filename);
+        // 执行添加操作
+        selectedFiles = selectedFiles0.filter(function(file) {
+            return file.name === filename;
+        });
+        uploadFiles();
+        $(this).text('已添加'); // 更改按钮文本表示状态已改变
+        // 更新文件数组或执行其他逻辑
+    });
+
+    $(document).on('click', '#fileSubmit', function(event) {
+         event.preventDefault();  // 阻止按钮默认的提交行为
+         event.stopPropagation(); // 阻止事件冒泡到父元素
+         uploadFiles();
+
+    });
+
+
+</script>
+
+</body>
+</html>

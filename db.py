@@ -19,24 +19,24 @@ def connect_clickhouse(conn_name):
     db.connect()
     return db
 
-# def query_all(db,sql):
-#
-#     conf = {'chsop':{
-#         "user": "yinglina",
-#         "password": "xfUW5GMr",
-#         "server_host": "127.0.0.1",
-#         "port": "10192",
-#         "db": "sop_e"
-#     }}
-#     connection = 'clickhouse://{user}:{password}@{server_host}:{port}/{db}'.format(**conf[db])
-#     engine = create_engine(connection, pool_size=100, pool_recycle=3600, pool_timeout=20)
-#     session = make_session(engine)
-#     cursor = session.execute(sql)
-#     try:
-#         fields = cursor._metadata.keys
-#         print(cursor.fetchall())
-#         mydata = pd.DataFrame([dict(zip(fields, item)) for item in cursor.fetchall()])
-#         return mydata
-#     finally:
-#         cursor.close()
-#         session.close()
+def query_all(db,sql):
+
+    conf = {'chmaster2':{
+        "user": "",
+        "password": "",
+        "server_host": "10.21.90.15",
+        "port": "28066",
+        "db": ""
+    }}
+    connection = 'clickhouse://{user}:{password}@{server_host}:{port}/{db}'.format(**conf[db])
+    engine = create_engine(connection, pool_size=100, pool_recycle=3600, pool_timeout=20)
+    session = make_session(engine)
+    cursor = session.execute(sql)
+    try:
+        fields = cursor._metadata.keys
+        print(cursor.fetchall())
+        mydata = pd.DataFrame([dict(zip(fields, item)) for item in cursor.fetchall()])
+        return mydata
+    finally:
+        cursor.close()
+        session.close()

@@ -154,6 +154,24 @@ def save(request):
         return render(request, 'report/table.html', locals())
         # return JsonResponse({'code': 403,"error":"当前服务器拒绝GET方式请求，请使用POST方式"})
 
+def upload(request):
+    if request.method == 'GET':
+        id = request.GET.get('id')
+        return render(request, 'report/upload.html', locals())
+
+    if request.method == 'POST':
+        files = request.FILES.getlist('files[]')  # 获取文件列表
+        file_urls = []
+        for file in files:
+            # 保存文件到服务器的操作
+            file_name = default_storage.save(file.name, ContentFile(file.read()))
+            file_url = default_storage.url(file_name)
+            file_urls.append(file_url)
+            print(file_urls)
+
+        return JsonResponse({'message': 'Files uploaded successfully', 'fileUrls': file_urls}, status=200)
+
+    return JsonResponse({'message': 'Invalid request'}, status=400)
 @csrf_exempt
 def get_uuid(request):
     if request.method == 'POST':
