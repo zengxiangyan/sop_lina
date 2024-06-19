@@ -31,7 +31,7 @@ def get_uuid2(start_date,end_date):
             and `sp一级品类` in ['Face','Lip','Makeup set','Eye','Nails'])
             GROUP BY `平台`,`sp一级品类`,`sp二级品类`,`sp品牌定位`,item_id) subquery)
         WHERE row_num<=15
-        ORDER BY `平台`,`sp一级品类`,`sp二级品类`,`sp品牌定位` ASC,`销售额` DESC;"""
+        ORDER BY `平台`,`sp一级品类`,`sp二级品类`,`sp品牌定位` ASC,`销售额` DESC"""
     ,f"""SELECT * FROM(
     SELECT
             *,
@@ -62,7 +62,7 @@ def get_uuid2(start_date,end_date):
             and `sp品牌定位` in ['Prestige'])
             GROUP BY `平台`,`sp一级品类`,`sp二级品类`,`sp品牌定位`,item_id) subquery)
         WHERE row_num<=15
-        ORDER BY `平台`,`sp一级品类`,`sp二级品类`,`sp品牌定位` ASC,`销售额` DESC;"""
+        ORDER BY `平台`,`sp一级品类`,`sp二级品类`,`sp品牌定位` ASC,`销售额` DESC"""
     ,f"""SELECT * FROM(
     SELECT
             *,
@@ -122,7 +122,7 @@ def get_uuid2(start_date,end_date):
         WHERE row_num<=10))
         GROUP BY `平台`,`sp一级品类`,`sp二级品类`,`sp品牌定位`,alias_all_bid,item_id) subquery)
     WHERE row_num<=10
-    ORDER BY `平台`,`sp一级品类`,`sp二级品类`,`sp品牌定位`,alias_all_bid ASC,`销售额` DESC;"""
+    ORDER BY `平台`,`sp一级品类`,`sp二级品类`,`sp品牌定位`,alias_all_bid ASC,`销售额` DESC"""
     ,f"""SELECT * FROM(
     SELECT
             *,
@@ -213,18 +213,26 @@ def get_uuid2(start_date,end_date):
             and `sp品牌定位`='Prestige')
             GROUP BY `平台`,`sp一级品类`,`sp品牌定位`,item_id) subquery)
         WHERE row_num<=15
-        ORDER BY `平台`,`sp一级品类`,`sp品牌定位` ASC,`销售额` DESC;
+        ORDER BY `平台`,`sp一级品类`,`sp品牌定位` ASC,`销售额` DESC
     """]
+    # print(sql_list)
     # -*- coding: utf-8 -*-
     from clickhouse_sqlalchemy import make_session
     from sqlalchemy import create_engine
     import pandas as pd
     import concurrent.futures
+    # conf = {
+    #     "user": "yinglina",
+    #     "password": "xfUW5GMr",
+    #     "server_host": "127.0.0.1",
+    #     "port": "10192",
+    #     "db": "sop"
+    # }
     conf = {
-        "user": "yinglina",
-        "password": "xfUW5GMr",
-        "server_host": "127.0.0.1",
-        "port": "10192",
+        "user": "chenziping",
+        "password": "iAFDqM6f",
+        "server_host": "10.21.90.15",
+        "port": "10081",
         "db": "sop"
     }
     connection = 'clickhouse://{user}:{password}@{server_host}:{port}/{db}'.format(**conf)
@@ -249,5 +257,5 @@ def get_uuid2(start_date,end_date):
     # 将结果合并
     uuid2_list = pd.concat(results, axis=0, ignore_index=True)
     return uuid2_list.to_list()
-#测试输出
+# 测试输出
 # print(get_uuid2('2023-10-01','2023-11-01'))
