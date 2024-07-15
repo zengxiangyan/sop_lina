@@ -1,3 +1,5 @@
+import pandas
+
 from db import connect_clickhouse
 from os.path import abspath, join, dirname
 import sys
@@ -216,7 +218,8 @@ def run():
 def get_data(db,sql,as_dict=True):
 
     data = db.query_all(sql,as_dict=as_dict)
-
+    data = pandas.DataFrame(data)
+    data.to_csv("huawang.csv",encoding='utf-8-sig',index=False)
     return data
 
 if __name__ == "__main__":
