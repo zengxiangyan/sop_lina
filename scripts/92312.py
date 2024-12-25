@@ -52,12 +52,12 @@ def get_Players_report(db, tbl,brand_where, players_where):
             transform(alias_all_bid,{brand_in}, [1,2,3,4,5,6,7,8,9,10],999) rank,
             case when alias_all_bid  in {brand_in} then alias_all_bid
                 else 0 end as alias_all_bid
-            ,dictGetOrDefault('all_brand', 'name', tuple(toUInt32(alias_all_bid)), 'others')"品牌"
+            ,dictGetOrDefault('all_brand', 'name', tuple(toUInt32(alias_all_bid)), 'Others')"品牌"
             ,toStartOfMonth(pkey) AS Gmonth,
-                       sum(sales)/100 AS sales_value,
-                       sum(num) AS sales_volume, 
-                       sum(sales)/100/sum(num) as Price_perUnit,
-                       sum (num* toFloat64OrZero(`spSKU件数`)) "销售件数"
+                       sum(sales)/100 AS columns1,
+                       sum(num) AS columns2, 
+                       sum(sales)/100/sum(num) as columns3,
+                       sum (num* toFloat64OrZero(`spSKU件数`)) columns4
             from {tbl}
             {where}
             group by alias_all_bid,rank,Gmonth
@@ -65,6 +65,7 @@ def get_Players_report(db, tbl,brand_where, players_where):
 
     ret = get_data(db,sql)
     df = pd.DataFrame(ret)
+    df.loc[len(df)] = {'rank':'1','alias_all_bid':0,"品牌":'Others','Gmonth':'2024-12-01','columns1':0,'columns2':0,'columns3':0,'columns4':0}
     return df
 
 
@@ -165,25 +166,13 @@ def get_style(wb,model_sheet_name,sheet_name,from_cell,to_cell):
     target_cell.protection = new_protection
     return wb
 
-def write_xlsx(data,row_s,col_s,work_book,model_sheet_name,sheet_name):
-
+def write_xlsx(data,row_s,col_s,work_book,sheet_name):
+    sheet = work_book[sheet_name]
     max_row,max_col = data.shape
     data = np.array(data).tolist()
+    data = [d[1:] for d in data]
     for r in range(max_row):
-        for c in range(max_col):
-            if r == 0:
-                work_book = get_style(wb=work_book,model_sheet_name=model_sheet_name,sheet_name=sheet_name,from_cell=style_map('sku_title'),to_cell=(row_s+r,col_s+c))
-            elif r == 1:
-                work_book = get_style(wb=work_book,model_sheet_name=model_sheet_name,sheet_name=sheet_name, from_cell=style_map('date_title'),to_cell=(row_s + r, col_s + c))
-            elif r == 2:
-                work_book = get_style(wb=work_book,model_sheet_name=model_sheet_name,sheet_name=sheet_name, from_cell=style_map('col_title'),to_cell=(row_s + r, col_s + c))
-            elif r == max_row-3:
-                work_book = get_style(wb=work_book,model_sheet_name=model_sheet_name,sheet_name=sheet_name, from_cell=style_map('total_row'),to_cell=(row_s + r, col_s + c))
-            elif r < max_row-3:
-                work_book = get_style(wb=work_book,model_sheet_name=model_sheet_name,sheet_name=sheet_name, from_cell=style_map('normal'),to_cell=(row_s + r, col_s + c))
-            else:
-                pass
-            sheet = work_book[sheet_name]
+        for c in range(max_col-1):
             sheet.cell(row_s+r,col_s+c).value = data[r][c]
     return work_book,max_row+row_s
 
@@ -199,150 +188,160 @@ def main():
             and or ("sp种类"='叶黄素',"sp复合种类" in ('蓝莓叶黄素','越橘叶黄素胡萝卜素','叶黄素越橘','叶黄素越橘蓝莓','蓝莓黑加仑叶黄素','野樱莓叶黄素','蓝莓叶黄素β-胡萝卜','虾青素叶黄素'))
         '''
     players_where = '''
-            where pkey>='2022-01-01' and pkey<'2024-12-01'
+            where pkey>='2022-01-01' and pkey<'2025-01-01'
             and "sp子品类"='植物精华' 
             and or ("sp种类"='叶黄素',"sp复合种类" in ('蓝莓叶黄素','越橘叶黄素胡萝卜素','叶黄素越橘','叶黄素越橘蓝莓','蓝莓黑加仑叶黄素','野樱莓叶黄素','蓝莓叶黄素β-胡萝卜','虾青素叶黄素'))
         '''
 
     Players_dict = {
-        'Taobao': {
-            'brand_where': brand_where + ''' 
+        'tb':{
+            'Taobao': {
+                'brand_where': brand_where + ''' 
+                    and "平台"='tb'
+                         ''',
+                'players_where':players_where + ''' 
                 and "平台"='tb'
-                     ''',
-            'players_where':players_where + ''' 
-            and "平台"='tb'
-                 '''
+                     '''
+            },
+            'Taobao&Domestic': {
+                'brand_where': brand_where + '''
+                    and "平台"='tb'
+                    and "跨境"='Domestic'
+                             ''',
+                'players_where': players_where + '''
+                    and "平台"='tb'
+                    and "跨境"='Domestic'
+                         '''
+            },
+            'Taobao&Cross-border': {
+                'brand_where': brand_where + '''
+                        and "平台"='tb'
+                        and "跨境"='Cross-border'
+                                 ''',
+                'players_where': players_where + '''
+                        and "平台"='tb'
+                        and "跨境"='Cross-border'
+                             '''
+            }
         },
-        'Taobao&Domestic': {
-            'brand_where': brand_where + '''
-                and "平台"='tb'
+        'tmall':{
+            'Tmall': {
+                'brand_where': brand_where + '''
+                and "平台"='tmall'
+                     ''',
+                'players_where': players_where + '''
+            and "平台"='tmall'
+                 '''
+            },
+            'Tmall&Domestic': {
+                'brand_where': brand_where + '''
+                and "平台"='tmall'
                 and "跨境"='Domestic'
                          ''',
-            'players_where': players_where + '''
-                and "平台"='tb'
+                'players_where': players_where + '''
+                and "平台"='tmall'
                 and "跨境"='Domestic'
                      '''
-        },
-        'Taobao&Cross-border': {
-            'brand_where': brand_where + '''
-                    and "平台"='tb'
+            },
+            'Tmall&Cross-border': {
+                'brand_where': brand_where + '''
+                    and "平台"='tmall'
                     and "跨境"='Cross-border'
                              ''',
-            'players_where': players_where + '''
-                    and "平台"='tb'
+                'players_where': players_where + '''
+                    and "平台"='tmall'
                     and "跨境"='Cross-border'
                          '''
+            }
         },
-        'Tmall': {
-            'brand_where': brand_where + ''' 
-            and "平台"='tmall'
-                 ''',
-            'players_where': players_where + ''' 
-        and "平台"='tmall'
-             '''
-        },
-        'Tmall&Domestic': {
-            'brand_where': brand_where + '''
-            and "平台"='tmall'
-            and "跨境"='Domestic'
-                     ''',
-            'players_where': players_where + '''
-            and "平台"='tmall'
-            and "跨境"='Domestic'
-                 '''
-        },
-        'Tmall&Cross-border': {
-            'brand_where': brand_where + '''
-                and "平台"='tmall'
-                and "跨境"='Cross-border'
-                         ''',
-            'players_where': players_where + '''
-                and "平台"='tmall'
-                and "跨境"='Cross-border'
-                     '''
-        },
-        'JD': {
-            'brand_where': brand_where + ''' 
-            and "平台"='jd'
-                 ''',
-            'players_where': players_where + ''' 
-        and "平台"='jd'
-             '''
-        },
-        'JD&Domestic': {
-            'brand_where': brand_where + '''
-            and "平台"='jd'
-            and "跨境"='Domestic'
-                     ''',
-            'players_where': players_where + '''
-            and "平台"='jd'
-            and "跨境"='Domestic'
-                 '''
-        },
-        'JD&Cross-border': {
-            'brand_where': brand_where + '''
+        'JD':{
+            'JD': {
+                'brand_where': brand_where + '''
                 and "平台"='jd'
-                and "跨境"='Cross-border'
-                         ''',
-            'players_where': players_where + '''
-                and "平台"='jd'
-                and "跨境"='Cross-border'
-                     '''
-        },
-        'Douyin': {
-            'brand_where': brand_where + ''' 
-            and "平台"='douyin'
-                 ''',
-            'players_where': players_where + ''' 
-        and "平台"='douyin'
-             '''
-        },
-        'Douyin&Domestic': {
-            'brand_where': brand_where + '''
-            and "平台"='douyin'
-            and "跨境"='Domestic'
                      ''',
-            'players_where': players_where + '''
-            and "平台"='douyin'
-            and "跨境"='Domestic'
+                'players_where': players_where + '''
+            and "平台"='jd'
                  '''
-        },
-        'Douyin&Cross-border': {
-            'brand_where': brand_where + '''
-                and "平台"='douyin'
-                and "跨境"='Cross-border'
+            },
+            'JD&Domestic': {
+                'brand_where': brand_where + '''
+                and "平台"='jd'
+                and "跨境"='Domestic'
                          ''',
-            'players_where': players_where + '''
-                and "平台"='douyin'
-                and "跨境"='Cross-border'
+                'players_where': players_where + '''
+                and "平台"='jd'
+                and "跨境"='Domestic'
                      '''
+            },
+            'JD&Cross-border': {
+                'brand_where': brand_where + '''
+                    and "平台"='jd'
+                    and "跨境"='Cross-border'
+                             ''',
+                'players_where': players_where + '''
+                    and "平台"='jd'
+                    and "跨境"='Cross-border'
+                         '''
+            }
+        },
+        'Douyin':{
+            'Douyin': {
+                'brand_where': brand_where + '''
+                and "平台"='douyin'
+                     ''',
+                'players_where': players_where + '''
+            and "平台"='douyin'
+                 '''
+            },
+            'Douyin&Domestic': {
+                'brand_where': brand_where + '''
+                and "平台"='douyin'
+                and "跨境"='Domestic'
+                         ''',
+                'players_where': players_where + '''
+                and "平台"='douyin'
+                and "跨境"='Domestic'
+                     '''
+            },
+            'Douyin&Cross-border': {
+                'brand_where': brand_where + '''
+                    and "平台"='douyin'
+                    and "跨境"='Cross-border'
+                             ''',
+                'players_where': players_where + '''
+                    and "平台"='douyin'
+                    and "跨境"='Cross-border'
+                         '''
+            }
         }
     }
 
-    template = 'コーセー様_納品データ_231120.xlsx' #报告魔板工作簿
-    output = '91130 output.xlsx' #报告最终输出的工作簿名称
-    model_sheet_name = '模板' #报告模板在哪一个sheet
-    sheet_name = '报告' #报告要保存在哪一个sheet
+    template = 'Eye Health Supplement in China EC Market - sample.xlsx' #报告魔板工作簿
+    output = '91130 output_test.xlsx' #报告最终输出的工作簿名称
+    sheet_name = 'Key Players Performance' #报告要保存在哪一个sheet
 
     db = connect_clickhouse('chsop')
-    # work_book = load_workbook(r'..\report\91130\\' + template)
-    for players,where in Players_dict.items():
-        df = get_Players_report(db,tbl,where['brand_where'],where['players_where'])
-        index = ['rank','品牌']
-        columns = 'Gmonth'
-        values = ['sales_value', 'sales_volume', 'Price_perUnit','销售件数']
-        aggfunc = {
-            'sales_value': 'sum',
-            'sales_volume': 'sum',
-            'Price_perUnit': 'sum',
-            # '销售件数':'销售件数'
-        }
-        pivot_df = get_pivot_df(df, index=index, columns=columns, values=values, aggfunc=aggfunc,
-                                fill_value=0)
-        if players == 'Taobao':
-            data = pivot_df
-        else:
-            data = pd.concat([data, pivot_df], axis=0, ignore_index=True)
-    data.to_excel(r'..\report\92312\\' + output,encoding='utf-8-sig')
+    work_book = load_workbook(r'..\report\92312\\' + template)
+    row_s,cols = 7,1
+    for source in Players_dict:
+        Player_dict = Players_dict[source]
+        for players,where in Player_dict.items():
+            df = get_Players_report(db,tbl,where['brand_where'],where['players_where'])
+            index = ['rank','品牌']
+            columns = 'Gmonth'
+            values = ['columns1', 'columns2', 'columns3','columns4']
+            aggfunc = {
+                'columns1': 'sum',
+                'columns2': 'sum',
+                'columns3': 'sum',
+                'columns4': 'sum'
+            }
+            pivot_df = get_pivot_df(df, index=index, columns=columns, values=values, aggfunc=aggfunc,
+                                    fill_value=0).head(-1)
+            work_book,row_s = write_xlsx(pivot_df,row_s,1,work_book,sheet_name)
+            row_s += 1
+        row_s += 1
+    work_book.save(r'..\report\92312\\' + output)
+
 if __name__ == '__main__':
     main()
