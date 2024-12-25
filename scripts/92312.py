@@ -11,58 +11,59 @@ from openpyxl.styles import Font, Fill, Border, Alignment, Protection
 sys.path.insert(0, join(abspath(dirname(__file__)), '../../'))
 report_path = r'{path}'.format(path=sys.path[0])
 
-def get_sku_info(where,tbl,group_date=False):
-    if group_date == False:
-        group_date = 'year(pkey) AS Gmonth'
-
+def get_top_brand(db,tbl,where):
     sql="""
-        select 'DECORTE' "対象メーカー"
-        ,"対象製品"          
-        ,"spSKU容量" "容量"
-        ,if("合并行" = 7,'合计',"平台") "ECプラットフォーム"
-        ,Gmonth "年月"
-        ,if("合并行" = 7,'合计',"sp店铺分类") "店舗タイプ"
-        ,if("合并行" = 7,'合计',STORE_NAME) "店舗名"
-        ,sales_value "金額規模（元）"
-        ,sales_volume "販売量規模（個数）"
-        ,Price_perUnit "取引個数単価（元/1本あたり）"
-        --,image
-        ,sid        
-        --,if("合并行" = 7,'NA',Price_perUnit) "取引個数単価（元/1本あたり）"
-        --, "最低取引個数単価（元/1本あたり）"
-        from(
-                select 
-                "spSKU名" ||"spSKU容量" "対象製品" 
-                ,"spSKU容量"
-                ,case when source = 1 and shop_type < 20 and shop_type != 9 then 'Taobao'
-                         when source = 1 and shop_type > 20 or source = 1 and shop_type = 9 then 'Tmall'
-                     when source = 2 then 'JD'
-                     when source = 5 then 'kaola'        
-                     when source = 6 then 'suning' 
-                     when source = 8 then 'Pin duo duo'
-                     when source = 9 then 'jiuxian'
-                     when source = 11 then 'Douyin'             
-                     else '其他' end as "平台"
-                --, toStartOfMonth(pkey) AS Gmonth
-                --, year(pkey) AS Gmonth
-                ,{group_date}
-                ,if(sid in (107428076,192151573,1000223736,1000427454),'旗艦店','非旗艦店') "sp店铺分类"
-                ,dictGet('all_shop', 'title', tuple(toUInt8(source), toUInt32(sid))) AS STORE_NAME
-                ,grouping("平台","sp店铺分类",STORE_NAME) "合并行" --揉在一起不显示的行，2^0+2^1+2^2=7
-                ,sum(sales)/100 AS sales_value
-                ,sum((num)*toFloat64OrZero("spSKU件数")) AS sales_volume
-                ,sales_value/sales_volume as Price_perUnit
-            ,argMin(sales/num/100,date) as "最低取引個数単価（元/1本あたり）"
-            ,argMax(img,date)as image
-            ,sid
-                FROM {tbl}
-                {where}
-                group by grouping sets(("対象製品" ,"spSKU容量","平台",Gmonth,"sp店铺分类",STORE_NAME,sid),("対象製品" ,"spSKU容量",Gmonth)) --做汇总行，前面的括号是其他的所有分组值，后面括号里的三列是要显示的数据。
-                )
-        order by "対象製品","spSKU容量", "ECプラットフォーム" = '合计',sales_value desc --平台=合计放最后一行
-        """.format(tbl=tbl,where=where,group_date=group_date)
+        with
+        case when source = 1 and shop_type < 20 and shop_type != 9 then 'tb'
+             when source = 1 and shop_type > 20 or source = 1 and shop_type = 9 then 'tmall'
+             when source = 2 then 'jd'
+             when source = 5 then 'kaola'        
+             when source = 6 then 'suning'        
+             when source = 9 then 'jiuxian'
+             when source = 11 then 'douyin'             
+             else '其他' end as "平台",
+        IF(source*100+shop_type IN [109,112,122,124,127,221,222,321,322,412,521,522,621,622,712,821,822,1121,1122], 'Cross-border', 'Domestic')  AS "跨境"
+        select alias_all_bid,dictGetOrDefault('all_brand', 'name', tuple(toUInt32(alias_all_bid)), '') AS "品牌",
+        sum(sales)/100 AS sales_value
+        from {tbl}
+        {where}
+        group by alias_all_bid
+        order by alias_all_bid desc 
+        limit 10  
+        """.format(tbl=tbl,where=where)
+    ret = get_data(db,sql,as_dict=False)
+    ret = [r[0] for r in ret]
+    return ret
 
-    return sql
+def get_Players_report(db, tbl,brand_where, players_where):
+    brand_in = get_top_brand(db, tbl, brand_where)
+    sql = '''
+            with
+            case when source = 1 and shop_type < 20 and shop_type != 9 then 'tb'
+                 when source = 1 and shop_type > 20 or source = 1 and shop_type = 9 then 'tmall'
+                 when source = 2 then 'jd'
+                 when source = 5 then 'kaola'        
+                 when source = 6 then 'suning'        
+                 when source = 9 then 'jiuxian'
+                 when source = 11 then 'douyin'             
+                 else '其他' end as "平台",
+            IF(source*100+shop_type IN [109,112,122,124,127,221,222,321,322,412,521,522,621,622,712,821,822,1121,1122], 'Cross-border', 'Domestic')  AS "跨境"
+            select 
+            case when alias_all_bid  in {brand_in} then alias_all_bid
+                else 0 end as alias_all_bid
+            ,dictGetOrDefault('all_brand', 'name', tuple(toUInt32(alias_all_bid)), 'others')"品牌"
+            ,toStartOfMonth(pkey) AS Gmonth,
+                       sum(sales)/100 AS sales_value,
+                       sum(num) AS sales_volume, 
+                       sum(sales)/100/sum(num) as Price_perUnit
+            from {tbl}
+            {where}
+            group by alias_all_bid,Gmonth
+        '''.format(tbl=tbl,brand_in=brand_in,where=players_where)
+
+    ret = get_data(db,sql)
+    df = pd.DataFrame(ret)
+    return df
 
 def get_item_info(db,where,tbl,group_date=False):
     if group_date == False:
@@ -216,33 +217,54 @@ def write_xlsx(data,row_s,col_s,work_book,model_sheet_name,sheet_name):
             sheet.cell(row_s+r,col_s+c).value = data[r][c]
     return work_book,max_row+row_s
 
+
 def main():
     #######################################  取报告可变的全局参数，可以任意改变  #############################################
 
-    tbl = 'sop_e.entity_prod_92312_E_2024'  #从哪一张e表取报告
+    tbl = 'sop_e.entity_prod_91130_E'  #从哪一张e表取报告
+    brand_where = '''
+            where pkey>='2024-01-01' and pkey<'2024-12-01'
+            and "sp子品类"='植物精华' 
+            and or ("sp种类"='叶黄素',"sp复合种类" in ('蓝莓叶黄素','越橘叶黄素胡萝卜素','叶黄素越橘','叶黄素越橘蓝莓','蓝莓黑加仑叶黄素','野樱莓叶黄素','蓝莓叶黄素β-胡萝卜','虾青素叶黄素'))
+        '''
+    players_where = '''
+            where pkey>='2022-01-01' and pkey<'2024-12-01'
+            and "sp子品类"='植物精华' 
+            and or ("sp种类"='叶黄素',"sp复合种类" in ('蓝莓叶黄素','越橘叶黄素胡萝卜素','叶黄素越橘','叶黄素越橘蓝莓','蓝莓黑加仑叶黄素','野樱莓叶黄素','蓝莓叶黄素β-胡萝卜','虾青素叶黄素'))
+        '''
+
+    Players_dict = {
+        'Taobao': {
+            'brand_where': brand_where + ''' 
+                and "平台"='tb'
+                     ''',
+            'players_where':players_where + ''' 
+            and "平台"='tb'
+                 '''
+        },
+        'Taobao&Domestic': {
+            'brand_where': brand_where + ''' 
+                and "平台"='tb'
+                and "跨境"='Domestic'
+                         ''',
+            'players_where': players_where + ''' 
+                and "平台"='tb'
+                and "跨境"='Domestic'
+                     '''
+        }
+
+    }
+
     template = 'コーセー様_納品データ_231120.xlsx' #报告魔板工作簿
     output = 'コーセー様_納品データ_231120 output.xlsx' #报告最终输出的工作簿名称
     model_sheet_name = '模板' #报告模板在哪一个sheet
     sheet_name = '报告' #报告要保存在哪一个sheet
-    # group_date = 'toStartOfMonth(pkey) AS Gmonth' # 此为分月取报告时用，默认分年，也可替换其它时间维度如：分季、分fy、mat等，只需要改变AS前面即可
-    group_date = 'year(pkey) AS Gmonth'  # 此为分年取报告时用，默认分年，也可替换其它时间维度如：分季、分fy、mat等，只需要改变AS前面即可
+
     db = connect_clickhouse('chsop')
-    work_book = load_workbook(r'..\report\92312\\' + template)
-    ####################################################################################################################
+    # work_book = load_workbook(r'..\report\91130\\' + template)
+    for players,where in Players_dict.items():
+        print(get_Players_report(db,tbl,where['brand_where'],where['players_where']))
 
-    ##############限定sku的范围，固定的sku可用列表直接限定，现在默认通过get_sku_list去取排除范围外的18个sku#########################
-
-    # sku_list = ['FACE POWDER','LIPOSOME  ADVANCED REPAIR SERUM','PRIME LATTE','SUN SHELTER MULTI PROTECTION','ULTIMUNE']
-    sku_list = get_sku_list(db,tbl)
-
-    ####################################################################################################################
-
-    #######################################  获取sku报告的核心代码  #######################################################
-    work_book = get_sku_report(db=db, tbl=tbl, sku_list=sku_list,row_s=3,col_s=1,work_book=work_book,model_sheet_name=model_sheet_name,sheet_name=sheet_name,group_date=group_date)
-
-    ################################################# 保存sku报告  ######################################################
-    # work_book.save(r'..\report\92312\\' + output)
-    #######################################  获取sku报告的核心代码  #######################################################
 
 if __name__ == '__main__':
     main()
