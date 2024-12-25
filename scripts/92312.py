@@ -237,7 +237,7 @@ def main():
         df = get_Players_report(db,tbl,where['brand_where'],where['players_where'])
         index = ['rank','品牌']
         columns = 'Gmonth'
-        values = ['sales_value', 'sales_volume', 'Price_perUnit']
+        values = ['sales_value', 'sales_volume', 'Price_perUnit','销售件数']
         aggfunc = {
             'sales_value': 'sum',
             'sales_volume': 'sum',
