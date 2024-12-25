@@ -213,17 +213,110 @@ def main():
             and "平台"='tb'
                  '''
         },
-        # 'Taobao&Domestic': {
-        #     'brand_where': brand_where + '''
-        #         and "平台"='tb'
-        #         and "跨境"='Domestic'
-        #                  ''',
-        #     'players_where': players_where + '''
-        #         and "平台"='tb'
-        #         and "跨境"='Domestic'
-        #              '''
-        # }
-
+        'Taobao&Domestic': {
+            'brand_where': brand_where + '''
+                and "平台"='tb'
+                and "跨境"='Domestic'
+                         ''',
+            'players_where': players_where + '''
+                and "平台"='tb'
+                and "跨境"='Domestic'
+                     '''
+        },
+        'Taobao&Cross-border': {
+            'brand_where': brand_where + '''
+                    and "平台"='tb'
+                    and "跨境"='Cross-border'
+                             ''',
+            'players_where': players_where + '''
+                    and "平台"='tb'
+                    and "跨境"='Cross-border'
+                         '''
+        },
+        'Tmall': {
+            'brand_where': brand_where + ''' 
+            and "平台"='tmall'
+                 ''',
+            'players_where': players_where + ''' 
+        and "平台"='tmall'
+             '''
+        },
+        'Tmall&Domestic': {
+            'brand_where': brand_where + '''
+            and "平台"='tmall'
+            and "跨境"='Domestic'
+                     ''',
+            'players_where': players_where + '''
+            and "平台"='tmall'
+            and "跨境"='Domestic'
+                 '''
+        },
+        'Tmall&Cross-border': {
+            'brand_where': brand_where + '''
+                and "平台"='tmall'
+                and "跨境"='Cross-border'
+                         ''',
+            'players_where': players_where + '''
+                and "平台"='tmall'
+                and "跨境"='Cross-border'
+                     '''
+        },
+        'JD': {
+            'brand_where': brand_where + ''' 
+            and "平台"='jd'
+                 ''',
+            'players_where': players_where + ''' 
+        and "平台"='jd'
+             '''
+        },
+        'JD&Domestic': {
+            'brand_where': brand_where + '''
+            and "平台"='jd'
+            and "跨境"='Domestic'
+                     ''',
+            'players_where': players_where + '''
+            and "平台"='jd'
+            and "跨境"='Domestic'
+                 '''
+        },
+        'JD&Cross-border': {
+            'brand_where': brand_where + '''
+                and "平台"='jd'
+                and "跨境"='Cross-border'
+                         ''',
+            'players_where': players_where + '''
+                and "平台"='jd'
+                and "跨境"='Cross-border'
+                     '''
+        },
+        'Douyin': {
+            'brand_where': brand_where + ''' 
+            and "平台"='douyin'
+                 ''',
+            'players_where': players_where + ''' 
+        and "平台"='douyin'
+             '''
+        },
+        'Douyin&Domestic': {
+            'brand_where': brand_where + '''
+            and "平台"='douyin'
+            and "跨境"='Domestic'
+                     ''',
+            'players_where': players_where + '''
+            and "平台"='douyin'
+            and "跨境"='Domestic'
+                 '''
+        },
+        'Douyin&Cross-border': {
+            'brand_where': brand_where + '''
+                and "平台"='douyin'
+                and "跨境"='Cross-border'
+                         ''',
+            'players_where': players_where + '''
+                and "平台"='douyin'
+                and "跨境"='Cross-border'
+                     '''
+        }
     }
 
     template = 'コーセー様_納品データ_231120.xlsx' #报告魔板工作簿
