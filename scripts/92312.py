@@ -28,7 +28,7 @@ def get_top_brand(db,tbl,where):
         from {tbl}
         {where}
         group by alias_all_bid
-        order by alias_all_bid desc 
+        order by sales_value desc 
         limit 10  
         """.format(tbl=tbl,where=where)
     ret = get_data(db,sql,as_dict=False)
@@ -49,76 +49,46 @@ def get_Players_report(db, tbl,brand_where, players_where):
                  else '其他' end as "平台",
             IF(source*100+shop_type IN [109,112,122,124,127,221,222,321,322,412,521,522,621,622,712,821,822,1121,1122], 'Cross-border', 'Domestic')  AS "跨境"
             select 
+            transform(alias_all_bid,{brand_in}, [1,2,3,4,5,6,7,8,9,10],999) rank,
             case when alias_all_bid  in {brand_in} then alias_all_bid
                 else 0 end as alias_all_bid
             ,dictGetOrDefault('all_brand', 'name', tuple(toUInt32(alias_all_bid)), 'others')"品牌"
             ,toStartOfMonth(pkey) AS Gmonth,
                        sum(sales)/100 AS sales_value,
                        sum(num) AS sales_volume, 
-                       sum(sales)/100/sum(num) as Price_perUnit
+                       sum(sales)/100/sum(num) as Price_perUnit,
+                       sum (num* toFloat64OrZero(`spSKU件数`)) "销售件数"
             from {tbl}
             {where}
-            group by alias_all_bid,Gmonth
+            group by alias_all_bid,rank,Gmonth
         '''.format(tbl=tbl,brand_in=brand_in,where=players_where)
 
     ret = get_data(db,sql)
     df = pd.DataFrame(ret)
     return df
 
-def get_item_info(db,where,tbl,group_date=False):
-    if group_date == False:
-        group_date = 'year(pkey) AS Gmonth'
-
-    sql="""
-            select 'DECORTE' "対象メーカー"
-            ,"対象製品"          
-            ,"spSKU容量" "容量"
-            ,"平台" "ECプラットフォーム"
-            ,Gmonth "年月"
-            ,"sp店铺分类" "店舗タイプ"
-            ,STORE_NAME "店舗名"
-            ,item_sales "金額規模（元）"
-            ,item_volume "販売量規模（個数）"
-            ,item_Price_perUnit "取引個数単価（元/1本あたり）"
-            ,sid        
-            from(
-                select 
-                "spSKU名" ||"spSKU容量" "対象製品" 
-                ,"spSKU容量"
-                ,case when source = 1 and shop_type < 20 and shop_type != 9 then 'Taobao'
-                         when source = 1 and shop_type > 20 or source = 1 and shop_type = 9 then 'Tmall'
-                     when source = 2 then 'JD'
-                     when source = 5 then 'kaola'        
-                     when source = 6 then 'suning' 
-                     when source = 8 then 'Pin duo duo'
-                     when source = 9 then 'jiuxian'
-                     when source = 11 then 'Douyin'             
-                     else '其他' end as "平台"
-                --, toStartOfMonth(pkey) AS Gmonth
-                --, year(pkey) AS Gmonth
-                ,{group_date}
-                ,if(sid in (107428076,192151573,1000223736,1000427454),'旗艦店','非旗艦店') "sp店铺分类"
-                ,dictGet('all_shop', 'title', tuple(toUInt8(source), toUInt32(sid))) AS STORE_NAME
-                ,sum(sales)/100 AS item_sales
-                ,sum((num)*toFloat64OrZero("spSKU件数")) AS item_volume
-                ,item_sales/item_volume as item_Price_perUnit
-            ,item_id
-            ,sid
-                FROM {tbl}
-                {where}
-                group by "対象製品" ,"spSKU容量","平台",Gmonth,"sp店铺分类",STORE_NAME,sid,item_id) --做汇总行，前面的括号是其他的所有分组值，后面括号里的三列是要显示的数据。
-            ORDER BY "取引個数単価（元/1本あたり）"
-            LIMIT 1 BY "対象製品" ,"spSKU容量","平台",Gmonth,"sp店铺分类",STORE_NAME,sid
-        """.format(tbl=tbl,where=where,group_date=group_date)
-    item_price = get_data(db,sql)
-    item_price = pd.DataFrame(item_price)
-    return item_price
 
 def get_data(db,sql,as_dict=True):
 
     data = db.query_all(sql,as_dict=as_dict)
 
     return data
+
+def get_pivot_df(df,index, columns, values, aggfunc, fill_value):
+
+    # 创建透视表
+    pivot_df = df.pivot_table(
+        index=index,
+        columns=columns,
+        values=values,
+        aggfunc=aggfunc,
+        fill_value=fill_value
+    )
+
+    pivot_df.reset_index(inplace=True)
+    # print(pivot_df.shape)
+    pivot_df.dropna(how='all', inplace=True)
+    return pivot_df
 
 def get_sku_list(db,tbl):
     sql = """
@@ -224,6 +194,7 @@ def main():
     tbl = 'sop_e.entity_prod_91130_E'  #从哪一张e表取报告
     brand_where = '''
             where pkey>='2024-01-01' and pkey<'2024-12-01'
+            and alias_all_bid not in (0,26,4023)
             and "sp子品类"='植物精华' 
             and or ("sp种类"='叶黄素',"sp复合种类" in ('蓝莓叶黄素','越橘叶黄素胡萝卜素','叶黄素越橘','叶黄素越橘蓝莓','蓝莓黑加仑叶黄素','野樱莓叶黄素','蓝莓叶黄素β-胡萝卜','虾青素叶黄素'))
         '''
@@ -242,29 +213,43 @@ def main():
             and "平台"='tb'
                  '''
         },
-        'Taobao&Domestic': {
-            'brand_where': brand_where + ''' 
-                and "平台"='tb'
-                and "跨境"='Domestic'
-                         ''',
-            'players_where': players_where + ''' 
-                and "平台"='tb'
-                and "跨境"='Domestic'
-                     '''
-        }
+        # 'Taobao&Domestic': {
+        #     'brand_where': brand_where + '''
+        #         and "平台"='tb'
+        #         and "跨境"='Domestic'
+        #                  ''',
+        #     'players_where': players_where + '''
+        #         and "平台"='tb'
+        #         and "跨境"='Domestic'
+        #              '''
+        # }
 
     }
 
     template = 'コーセー様_納品データ_231120.xlsx' #报告魔板工作簿
-    output = 'コーセー様_納品データ_231120 output.xlsx' #报告最终输出的工作簿名称
+    output = '91130 output.xlsx' #报告最终输出的工作簿名称
     model_sheet_name = '模板' #报告模板在哪一个sheet
     sheet_name = '报告' #报告要保存在哪一个sheet
 
     db = connect_clickhouse('chsop')
     # work_book = load_workbook(r'..\report\91130\\' + template)
     for players,where in Players_dict.items():
-        print(get_Players_report(db,tbl,where['brand_where'],where['players_where']))
-
-
+        df = get_Players_report(db,tbl,where['brand_where'],where['players_where'])
+        index = ['rank','品牌']
+        columns = 'Gmonth'
+        values = ['sales_value', 'sales_volume', 'Price_perUnit']
+        aggfunc = {
+            'sales_value': 'sum',
+            'sales_volume': 'sum',
+            'Price_perUnit': 'sum',
+            # '销售件数':'销售件数'
+        }
+        pivot_df = get_pivot_df(df, index=index, columns=columns, values=values, aggfunc=aggfunc,
+                                fill_value=0)
+        if players == 'Taobao':
+            data = pivot_df
+        else:
+            data = pd.concat([data, pivot_df], axis=0, ignore_index=True)
+    data.to_excel(r'..\report\92312\\' + output,encoding='utf-8-sig')
 if __name__ == '__main__':
     main()
