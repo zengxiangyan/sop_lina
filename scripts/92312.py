@@ -5,7 +5,7 @@ from os.path import abspath, join, dirname
 import sys
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import date
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.styles import Font, Fill, Border, Alignment, Protection
@@ -67,7 +67,7 @@ def get_Players_report(db, tbl,brand_where, players_where,total_type):
             '''.format(tbl=tbl,brand_in=brand_in,where=players_where)
         ret = get_data(db, sql)
         df = pd.DataFrame(ret)
-        df.loc[len(df)] = {'rank': 999, 'alias_all_bid': 0, "品牌": 'Others', 'Gmonth': datetime(2024, 12, 1),'columns1': '-', 'columns2': '-', 'columns3': '-', 'columns4': '-'}
+        df.loc[len(df)] = {'rank': 999, 'alias_all_bid': 0, "品牌": 'Others', 'Gmonth': date(2024, 12, 1),'columns1': '-', 'columns2': '-', 'columns3': '-', 'columns4': '-'}
 
     else:
         sql = '''
@@ -96,7 +96,7 @@ def get_Players_report(db, tbl,brand_where, players_where,total_type):
         '''.format(tbl=tbl, brand_in=brand_in, where=players_where)
         ret = get_data(db,sql)
         df = pd.DataFrame(ret)
-        df.loc[len(df)] = {'rank':999,'alias_all_bid':0,"品牌":'Online Total','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':999,'alias_all_bid':0,"品牌":'Online Total','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
     return df
 
 def get_Format_report(db, tbl,brand_where, players_where,total_type):
@@ -136,15 +136,15 @@ def get_Format_report(db, tbl,brand_where, players_where,total_type):
 
         ret = get_data(db,sql)
         df = pd.DataFrame(ret)
-        df.loc[len(df)] = {'rank':1,"剂型":'capsule','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
-        df.loc[len(df)] = {'rank':2,"剂型":'effervescent tablets','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
-        df.loc[len(df)] = {'rank':3,"剂型":'gummy','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
-        df.loc[len(df)] = {'rank':4,"剂型":'jelly','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
-        df.loc[len(df)] = {'rank':5,"剂型":'pill','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
-        df.loc[len(df)] = {'rank':6,"剂型":'powder','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
-        df.loc[len(df)] = {'rank':7,"剂型":'ready-to-drink','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
-        df.loc[len(df)] = {'rank':8,"剂型":'tablet','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
-        df.loc[len(df)] = {'rank':9,"剂型":'others','Gmonth':datetime(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':1,"剂型":'capsule','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':2,"剂型":'effervescent tablets','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':3,"剂型":'gummy','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':4,"剂型":'jelly','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':5,"剂型":'pill','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':6,"剂型":'powder','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':7,"剂型":'ready-to-drink','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':8,"剂型":'tablet','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
+        df.loc[len(df)] = {'rank':9,"剂型":'others','Gmonth':date(2024, 12, 1),'columns1':'-','columns2':'-','columns3':'-','columns4':'-'}
     else:
         sql = '''
             with
@@ -172,7 +172,7 @@ def get_Format_report(db, tbl,brand_where, players_where,total_type):
         '''.format(tbl=tbl, where=players_where)
         ret = get_data(db, sql)
         df = pd.DataFrame(ret)
-        df.loc[len(df)] = {'rank': 999, "剂型": 'Online Total', 'Gmonth': datetime(2024, 12, 1), 'columns1': '-','columns2': '-', 'columns3': '-', 'columns4': '-'}
+        df.loc[len(df)] = {'rank': 999, "剂型": 'Online Total', 'Gmonth': date(2024, 12, 1), 'columns1': '-','columns2': '-', 'columns3': '-', 'columns4': '-'}
     return df
 
 def get_data(db,sql,as_dict=True):
